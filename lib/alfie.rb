@@ -63,6 +63,10 @@ module Alfie
 
     private
 
+    def __alfie_store
+      ActiveRecord::Base.instance_variable_get(:@alfie_store)
+    end
+
     # returns the class singleton, the instance of class Class
     # defaults to the metaclass of self, but can optionally
     # return the metaclass of any class specified with the ':context'
@@ -107,7 +111,7 @@ module Alfie
 
     # initializes necessary class instance vars
     def __alfie_init(options = {})
-      __meta_eval(context: ActiveRecord::Base){@alfie_store ||= ActiveSupport::Cache::MemoryStore.new}
+      ActiveRecord::Base.instance_variable_set(:@alfie_store, ActiveSupport::Cache::MemoryStore.new)
       @alfie_procs ||= {}
       @alfie_columns ||= {}
       @alfie_settings ||= {}.merge(options)
@@ -131,11 +135,11 @@ module Alfie
     # end
 
     def __alfie_fetch(key)
-      if @alfie_store.exist?("#{self.name}/#{key}")
-        @alfie_store.fetch("#{self.name}/#{key}")
+      if __alfie_store.exist?("#{self.name}/#{key}")
+        __alfie_store.fetch("#{self.name}/#{key}")
       elsif @alfie_procs.has_key?(key)
         result = @alfie_procs[key].call
-        @alfie_store.write("#{self.name}/#{key}", result)
+        __alfie_store.write("#{self.name}/#{key}", result)
         result
       else
         # complete cache miss
