@@ -7,11 +7,11 @@ require "alfie/version"
 Gem::Specification.new do |s|
   s.name        = "alfie"
   s.version     = Alfie::VERSION
-  s.authors     = ["TODO: Your name"]
-  s.email       = ["TODO: Your email"]
-  s.homepage    = "TODO"
-  s.summary     = "TODO: Summary of Alfie."
-  s.description = "TODO: Description of Alfie."
+  s.authors     = ["Josh Lauer"]
+  s.email       = ["josh@cloudspace.com"]
+  # s.homepage    = "TODO"
+  s.summary     = "A simple lazy caching gizmo"
+  s.description = "Alfie."
 
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc"]
   s.test_files = Dir["test/**/*"]
