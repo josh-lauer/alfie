@@ -68,22 +68,22 @@ module Alfie
     # return the metaclass of any class specified with the ':context'
     # named argument
     def __metaclass(context: self)
-      class << klass; self; end
+      class << context; self; end
     end
 
     # evaluates block in the metaclass of context
     def __meta_eval(context: self, &block)
-      __metaclass(context: klass).instance_eval &block
+      __metaclass(context: context).instance_eval &block
     end
 
     # add a method to the metaclass of context
     def __meta_def(method_name, context: self, &block)
-      __meta_eval(context) { define_method method_name, &block }
+      __meta_eval(context: context) { define_method method_name, &block }
     end
 
     # defines an instance method on context
     def __class_def(method_name, context: self, &block)
-      class_eval { define_method method_name, &block }
+      context.class_eval { define_method method_name, &block }
     end
 
     def __alfie_default_settings
