@@ -37,7 +37,7 @@ module Alfie
       raise "a block is required" if !block_given?
       raise "the method #{self.name}.#{method_name.inspect} is already defined, use another name" if respond_to?(method_name)
       __alfie_init(options)
-      __alfie_store_proc(method_name, block)
+      @alfie_procs[method_name.to_sym] = block
       __meta_def(method_name) { __alfie_fetch(method_name) }
     end
 
@@ -64,22 +64,25 @@ module Alfie
     private
 
     # returns the class singleton, the instance of class Class
-    def __metaclass
-      class << self; self; end
+    # defaults to the metaclass of self, but can optionally
+    # return the metaclass of any class specified with the ':context'
+    # named argument
+    def __metaclass(context: self)
+      class << klass; self; end
     end
 
-    # evaluates block in the context of the metaclass
-    def __meta_eval(&block)
-      __metaclass.instance_eval &block
+    # evaluates block in the metaclass of context
+    def __meta_eval(context: self, &block)
+      __metaclass(context: klass).instance_eval &block
     end
 
-    # add a method to the metaclass
-    def __meta_def(method_name, &block)
-      __meta_eval { define_method method_name, &block }
+    # add a method to the metaclass of context
+    def __meta_def(method_name, context: self, &block)
+      __meta_eval(context) { define_method method_name, &block }
     end
 
-    # defines an instance method
-    def __class_def(method_name, &block)
+    # defines an instance method on context
+    def __class_def(method_name, context: self, &block)
       class_eval { define_method method_name, &block }
     end
 
@@ -104,7 +107,8 @@ module Alfie
 
     # initializes necessary class instance vars
     def __alfie_init(options = {})
-      @alfie_store ||= ActiveSupport::Cache::MemoryStore.new
+      __meta_eval(context: ActiveRecord::Base){@alfie_store ||= ActiveSupport::Cache::MemoryStore.new}
+      @alfie_procs ||= {}
       @alfie_columns ||= {}
       @alfie_settings ||= {}.merge(options)
       include Alfie::InstanceMethods
@@ -118,20 +122,20 @@ module Alfie
     #   end
     # end
 
-    def __alfie_store_proc(key, val)
-      @alfie_store.write("alfie/procs/#{key}", val)
-    end
+    # def __alfie_store_proc(key, p)
+    #   @alfie_procs[key] = p
+    # end
 
-    def __alfie_fetch_proc(key)
-      @alfie_store.read("alfie/procs/#{key}")
-    end
+    # def __alfie_fetch_proc(key)
+    #   @alfie_store.read("alfie/procs/#{key}")
+    # end
 
     def __alfie_fetch(key)
-      if @alfie_store.exist?("alfie/store/#{key}")
-        @alfie_store.fetch("alfie/store/#{key}")
-      elsif @alfie_store.exist?("alfie/procs/#{key}")
-        result = @alfie_store.read("alfie/procs/#{key}").call
-        @alfie_store.write("alfie/store/#{key}", result)
+      if @alfie_store.exist?("#{self.name}/#{key}")
+        @alfie_store.fetch("#{self.name}/#{key}")
+      elsif @alfie_procs.has_key?(key)
+        result = @alfie_procs[key].call
+        @alfie_store.write("#{self.name}/#{key}", result)
         result
       else
         # complete cache miss
